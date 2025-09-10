@@ -10,55 +10,47 @@
 High Level Design
 
 ```mermaid
-flowchart LR
-  %% High-level components and data flow
-  subgraph K8s[Kubernetes Cluster]
-    subgraph NS[Namespace: sre]
-      OP[Operator 
-        - Watch CRDs
-        - Filter conditions
-        - Call Agent decide & execute
-        - Update status/events]
-      AG[SRE Agent 
-        - LLM Adapter Azure AI Foundry 
-        - Guardrails allow-list, mode, rate-limit
-        - Action executors]
+flowchart TB
+  classDef azure fill:#eef6ff,stroke:#2563eb,color:#1e3a8a
+  classDef k8s fill:#ecfdf5,stroke:#059669,color:#065f46
+  classDef sec fill:#fff7ed,stroke:#d97706,color:#7c2d12
+  classDef cicd fill:#f3f4f6,stroke:#6b7280,color:#111827
+
+  %% CI/CD
+  GH[(GitHub Actions\nOIDC)]:::cicd
+
+  %% Azure Core
+  subgraph AZ["Azure Subscription"]
+    VNET[(VNet + Subnets + Private DNS)]:::azure
+    ACR[(Azure Container Registry)]:::azure
+    KV[(Azure Key Vault)]:::sec
+    AIF[(Azure AI Foundry / OpenAI API)]:::azure
+
+    subgraph AKS["Azure Kubernetes Service"]
+      INGR[(Ingress Controller)]:::azure
+      PODS(("Operator & SRE Agent
+         (앱 레포에서 배포)")):::k8s
+
+      subgraph OBS["Observability Stack (Open Source)"]
+        LOKI[(Loki + Promtail)]:::k8s
+        PROM[(Prometheus + Alertmanager)]:::k8s
+        GRAF[(Grafana)]:::k8s
+      end
+
+      WI[(Workload Identity)]:::sec
+      CSI[(Secrets Store CSI Driver)]:::sec
     end
-
-    API[K8s API Server]
-    CRD1[[CRD: SreTrigger]]
-    CRD2[[CRD: SreAction]]
   end
 
-  subgraph LLM[Azure AI Foundry OpenAI-compatible]
-    DEPLOY[Model Deployment]
-  end
-
-  subgraph Obs[Observability optional]
-    METRICS[Prometheus / OTEL Metrics]
-    LOGS[Loki / K8s Logs]
-    GRAFANA[Grafana Dashboards]
-  end
-
-  %% Relationships
-  CRD1 --> OP
-  CRD2 --> OP
-  OP -- watch & reconcile --> API
-
-  OP -- "POST /decide\n(trigger, context, actionRef, mode, correlationId)" --> AG
-  AG -- "Analyze" --> DEPLOY
-  DEPLOY -- "decision (approve|deny|manual)\nrationale, params" --> AG
-
-  AG -- "Guard check\n(allow-list/mode/rate-limit/idempotency)" --> AG
-  AG -- "Execute approved action\n(e.g., restart pods / scale deployment)" --> API
-  AG -- "result / meta" --> OP
-  OP -- "status update\n(events/annotations)" --> API
-
-  OP -. metrics/logs/traces .-> METRICS
-  AG -. metrics/logs/traces .-> METRICS
-  AG -. logs .-> LOGS
-  METRICS -. visualize .-> GRAFANA
-  LOGS -. visualize .-> GRAFANA
+  %% Flows
+  GH -->|IaC & App Deploy| AKS
+  GH -->|Build & Push| ACR
+  PODS -->|Pull Images| ACR
+  PODS -->|Secrets| KV
+  PODS -->|LLM API| AIF
+  PODS -->|Logs| LOKI
+  PODS -->|Metrics| PROM
+  OBS --> GRAF
 ```
 
 
