@@ -176,47 +176,65 @@ pre-commit install && pre-commit run --all-files
 
 ### AutoGen Development Guide
 
-이 프로젝트는 **AutoGen 0.2+**를 사용한 멀티 에이전트 시스템입니다. AutoGen의 올바른 사용 패턴을 이해하고 개발하기 위한 가이드입니다.
+이 프로젝트는 **AutoGen 하이브리드 구조**를 사용한 멀티 에이전트 시스템입니다. v0.2 호환성과 최신 0.7.4+ 기능을 함께 활용합니다.
+
+#### AutoGen 패키지 구조
+
+**설치된 패키지:**
+- `pyautogen` - v0.2 호환 API (기존 GroupChat, AssistantAgent 등)
+- `autogen-agentchat` - 새로운 에이전트 시스템 (0.7.4+)
+- `autogen-ext[openai]` - 모델 클라이언트와 확장 기능
 
 #### AutoGen 핵심 개념
 
 AutoGen에서는 **"Orchestrator"라는 공식 용어가 없습니다**. 대신 다음 구조를 사용:
 
 ```python
-# 1. GroupChatManager (AutoGen의 실제 orchestrator)
+# 1. v0.2 스타일 (안정적, 검증됨)
 from autogen import GroupChat, GroupChatManager, AssistantAgent
 
-# 2. Workflow (비즈니스 로직 래퍼) - AutoGen 0.7.4+
+# 2. v0.7.4+ 스타일 (최신 기능)
+from autogen_agentchat.agents import AssistantAgent as NewAssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+# 3. 하이브리드 Workflow (추천)
 class SREWorkflow:
     def __init__(self):
-        self.agents = self._create_agents()
-        self.group_chat = self._create_group_chat()
-        self.manager = self._create_manager()  # GroupChatManager
-
+        self.agents = self._create_agents()      # v0.2 호환
+        self.group_chat = self._create_group_chat()  # v0.2 안정성
+        self.manager = self._create_manager()    # GroupChatManager
+    
     def _create_manager(self) -> GroupChatManager:
         return GroupChatManager(
             groupchat=self.group_chat,
             llm_config={"model": "gpt-4", "temperature": 0.0}
         )
-```
+```#### 에이전트 작성 패턴 (하이브리드 방식)
 
-#### 에이전트 작성 패턴 (AutoGen 0.7.4+)
-
-**AssistantAgent 기반** (권장):
+**v0.2 호환 방식** (현재 사용, 안정적):
 ```python
-from autogen import AssistantAgent
-from autogen.agentchat.contrib.capabilities import teachability
+from autogen import ConversableAgent
 
-class AnalysisAgent(AssistantAgent):
+class AnalysisAgent(ConversableAgent):
     def __init__(self, name: str, **kwargs):
         super().__init__(name=name, system_message="...", **kwargs)
-
-        # 도구 등록 (AutoGen 0.7.4+ 패턴)
-        self._register_tools()
-
-    def _register_tools(self):
+        
+        # v0.2 도구 등록 패턴
         self.register_for_llm(name="get_pod_status")(self.k8s_tools.get_pod_status)
         self.register_for_execution(name="get_pod_status")(self.k8s_tools.get_pod_status)
+```
+
+**v0.7.4+ 최신 방식** (향후 전환):
+```python
+from autogen_agentchat.agents import AssistantAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+class ModernAnalysisAgent(AssistantAgent):
+    def __init__(self, name: str, **kwargs):
+        model_client = OpenAIChatCompletionClient(model="gpt-4")
+        super().__init__(name=name, model_client=model_client, **kwargs)
+        
+        # 새로운 도구 등록 방식 (0.7.4+)
 ```
 
 #### 도구(Tools) 작성 패턴
@@ -268,15 +286,15 @@ async def process_incident(self, event_data: dict) -> dict:
     return self._extract_decision(result)
 ```
 
-#### 개발 시 주의사항 (AutoGen 0.7.4+)
+#### 개발 시 주의사항 (하이브리드 환경)
 
-1. **에이전트 타입**: `AssistantAgent` vs `UserProxyAgent` 구분
-2. **Function Calling**: `Annotated` 타입 힌트 필수
-3. **Capabilities**: `teachability`, `transform_messages` 등 새로운 기능 활용
-4. **Error Handling**: AutoGen 내부 예외 처리 고려
+1. **패키지 선택**: v0.2 호환(`autogen`) vs 신버전(`autogen-agentchat`) 구분
+2. **Function Calling**: `Annotated` 타입 힌트 필수 (두 버전 공통)
+3. **Model Client**: 신버전은 `OpenAIChatCompletionClient` 등 명시적 클라이언트 필요
+4. **Error Handling**: 버전별로 다른 예외 처리 패턴
 5. **Async/Await**: 모든 LLM 호출은 비동기 권장
 6. **Message History**: GroupChat이 대화 히스토리 자동 관리
-7. **Speaker Selection**: 더 정교한 발화자 선택 메커니즘
+7. **Migration Path**: v0.2 → v0.7.4+ 점진적 전환 가능
 
 #### 디버깅 팁
 

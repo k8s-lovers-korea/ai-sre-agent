@@ -9,15 +9,14 @@ from __future__ import annotations
 from typing import Any
 import structlog
 
-from autogen import AssistantAgent
-from autogen.agentchat.contrib.capabilities import teachability
+from autogen import ConversableAgent
 
 from ..tools.kubernetes import KubernetesTools
 
 logger = structlog.get_logger()
 
 
-class AnalysisAgent(AssistantAgent):
+class AnalysisAgent(ConversableAgent):
     """
     Kubernetes issue analysis agent using AutoGen 0.7.4+ patterns.
 
@@ -39,18 +38,7 @@ class AnalysisAgent(AssistantAgent):
         # Initialize Kubernetes tools
         self.k8s_tools = KubernetesTools()
 
-        # AutoGen 0.7.4+ function calling pattern
-        from autogen.agentchat.contrib.capabilities import (
-            transform_messages,
-            transforms,
-        )
-
-        # Register tools using new pattern
-        self._register_tools()
-
-    def _register_tools(self):
-        """Register tools using AutoGen 0.7.4+ pattern."""
-        # Modern function registration approach
+        # Register AutoGen function calling tools
         self.register_for_llm(name="get_pod_status")(self.k8s_tools.get_pod_status)
         self.register_for_llm(name="get_recent_events")(
             self.k8s_tools.get_recent_events
