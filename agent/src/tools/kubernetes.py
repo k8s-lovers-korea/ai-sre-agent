@@ -8,6 +8,7 @@ with AutoGen agents for function calling.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Any, Annotated
 
 import structlog
@@ -192,7 +193,7 @@ class KubernetesTools:
 
             deployment.spec.template.metadata.annotations[
                 "kubectl.kubernetes.io/restartedAt"
-            ] = asyncio.get_event_loop().time()
+            ] = datetime.utcnow().isoformat()
 
             # Update deployment
             self.apps_v1.patch_namespaced_deployment(

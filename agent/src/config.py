@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -31,7 +31,8 @@ class LLMSettings(BaseSettings):
     max_tokens: int = 1000
     timeout_seconds: int = 60
 
-    @validator("azure_openai_endpoint")
+    @field_validator("azure_openai_endpoint")
+    @classmethod
     def validate_azure_endpoint(cls, v):
         if v and not v.startswith("https://"):
             raise ValueError("Azure OpenAI endpoint must start with https://")

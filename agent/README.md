@@ -184,15 +184,15 @@ AutoGen에서는 **"Orchestrator"라는 공식 용어가 없습니다**. 대신 
 
 ```python
 # 1. GroupChatManager (AutoGen의 실제 orchestrator)
-from autogen import GroupChat, GroupChatManager
+from autogen import GroupChat, GroupChatManager, AssistantAgent
 
-# 2. Workflow (비즈니스 로직 래퍼)
+# 2. Workflow (비즈니스 로직 래퍼) - AutoGen 0.7.4+
 class SREWorkflow:
     def __init__(self):
         self.agents = self._create_agents()
         self.group_chat = self._create_group_chat()
         self.manager = self._create_manager()  # GroupChatManager
-    
+
     def _create_manager(self) -> GroupChatManager:
         return GroupChatManager(
             groupchat=self.group_chat,
@@ -200,17 +200,21 @@ class SREWorkflow:
         )
 ```
 
-#### 에이전트 작성 패턴
+#### 에이전트 작성 패턴 (AutoGen 0.7.4+)
 
-**Function Calling 에이전트** (권장):
+**AssistantAgent 기반** (권장):
 ```python
-from autogen import ConversableAgent
+from autogen import AssistantAgent
+from autogen.agentchat.contrib.capabilities import teachability
 
-class AnalysisAgent(ConversableAgent):
+class AnalysisAgent(AssistantAgent):
     def __init__(self, name: str, **kwargs):
         super().__init__(name=name, system_message="...", **kwargs)
-        
-        # 도구 등록 (AutoGen 0.2+ 패턴)
+
+        # 도구 등록 (AutoGen 0.7.4+ 패턴)
+        self._register_tools()
+
+    def _register_tools(self):
         self.register_for_llm(name="get_pod_status")(self.k8s_tools.get_pod_status)
         self.register_for_execution(name="get_pod_status")(self.k8s_tools.get_pod_status)
 ```
@@ -227,40 +231,52 @@ async def get_pod_status(
 ) -> dict[str, Any]:
     """
     Get pod status information.
-    
+
     Args:
         namespace: Kubernetes namespace
         pod_name: Specific pod name (optional)
-    
+
     Returns:
         Pod status information
     """
     # 구현...
 ```
 
-#### 워크플로우 실행 패턴
+#### 워크플로우 실행 패턴 (AutoGen 0.7.4+)
 
-**비동기 처리** (권장):
+**비동기 처리 + 새로운 GroupChat 기능**:
 ```python
 async def process_incident(self, event_data: dict) -> dict:
     initial_message = f"분석해주세요: {event_data}"
-    
+
+    # AutoGen 0.7.4+ GroupChat 설정
+    group_chat = GroupChat(
+        agents=list(self.agents.values()),
+        messages=[],
+        max_round=10,
+        speaker_selection_method="auto",
+        allow_repeat_speaker=False,  # 새로운 기능
+        send_introductions=True,     # 에이전트 소개
+    )
+
     result = await self.manager.a_initiate_chat(
-        self.agents["analysis"], 
+        self.agents["analysis"],
         message=initial_message,
         max_turns=10
     )
-    
+
     return self._extract_decision(result)
 ```
 
-#### 개발 시 주의사항
+#### 개발 시 주의사항 (AutoGen 0.7.4+)
 
-1. **LLM Config**: 각 에이전트마다 다른 모델/설정 가능
+1. **에이전트 타입**: `AssistantAgent` vs `UserProxyAgent` 구분
 2. **Function Calling**: `Annotated` 타입 힌트 필수
-3. **Error Handling**: AutoGen 내부 예외 처리 고려
-4. **Async/Await**: 모든 LLM 호출은 비동기 권장
-5. **Message History**: GroupChat이 대화 히스토리 자동 관리
+3. **Capabilities**: `teachability`, `transform_messages` 등 새로운 기능 활용
+4. **Error Handling**: AutoGen 내부 예외 처리 고려
+5. **Async/Await**: 모든 LLM 호출은 비동기 권장
+6. **Message History**: GroupChat이 대화 히스토리 자동 관리
+7. **Speaker Selection**: 더 정교한 발화자 선택 메커니즘
 
 #### 디버깅 팁
 

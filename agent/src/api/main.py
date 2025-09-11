@@ -7,6 +7,7 @@ Provides REST API for the Kubernetes Operator to interact with the agent.
 from __future__ import annotations
 
 import os
+import uuid
 from typing import Any
 
 import structlog
@@ -95,7 +96,7 @@ async def decide(request: DecisionRequest) -> DecisionResponse:
 
     try:
         # Use AutoGen workflow for multi-agent decision making
-        correlation_id = f"req-{hash(str(request))}"
+        correlation_id = f"req-{uuid.uuid4().hex}"
 
         result = await sre_workflow.process_incident(
             event_data=request.event_data,

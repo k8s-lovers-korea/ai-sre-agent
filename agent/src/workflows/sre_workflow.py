@@ -11,7 +11,8 @@ import asyncio
 from typing import Any
 
 import structlog
-from autogen import ConversableAgent, GroupChat, GroupChatManager
+from autogen import AssistantAgent, GroupChat, GroupChatManager, UserProxyAgent
+from autogen.agentchat import ConversableAgent
 
 from ..agents.analysis import AnalysisAgent
 from ..config import get_settings
@@ -56,20 +57,20 @@ class SREWorkflow:
         # approval_agent = ApprovalAgent(...)
         # execution_agent = ExecutionAgent(...)
 
-        # For now, create placeholder agents
-        recommendation_agent = ConversableAgent(
+        # For now, create placeholder agents using AssistantAgent (AutoGen 0.7.4+)
+        recommendation_agent = AssistantAgent(
             name="recommendation_agent",
             system_message="You suggest remediation actions based on analysis.",
             llm_config={"model": "gpt-4", "temperature": 0.2},
         )
 
-        guard_agent = ConversableAgent(
+        guard_agent = AssistantAgent(
             name="guard_agent",
             system_message="You validate safety of proposed actions.",
-            llm_config={"model": "gpt-3.5-turbo", "temperature": 0.0},
+            llm_config={"model": "gpt-4", "temperature": 0.0},
         )
 
-        approval_agent = ConversableAgent(
+        approval_agent = AssistantAgent(
             name="approval_agent",
             system_message="You make final approval decisions for actions.",
             llm_config={"model": "gpt-4", "temperature": 0.1},
@@ -83,12 +84,14 @@ class SREWorkflow:
         }
 
     def _create_group_chat(self) -> GroupChat:
-        """Create the multi-agent group chat."""
+        """Create the multi-agent group chat using AutoGen 0.7.4+ patterns."""
         return GroupChat(
             agents=list(self.agents.values()),
             messages=[],
             max_round=10,  # Maximum conversation rounds
             speaker_selection_method="auto",  # Let AutoGen manage turn-taking
+            allow_repeat_speaker=False,  # New in 0.7.4+
+            send_introductions=True,  # Send agent introductions
         )
 
     def _create_manager(self) -> GroupChatManager:
