@@ -1,0 +1,57 @@
+# Agent Configuration
+agents:
+  analysis:
+    name: "sre_analysis_agent"
+    model: "gpt-4"
+    temperature: 0.3
+    max_tokens: 1000
+    system_message: |
+      You are a Kubernetes SRE Analysis Agent specialized in diagnosing issues
+      from events, logs, and metrics. Always provide evidence-based analysis
+      with confidence levels.
+
+  recommendation:
+    name: "sre_recommendation_agent"
+    model: "gpt-4"
+    temperature: 0.2
+    max_tokens: 800
+    system_message: |
+      You are a Kubernetes SRE Recommendation Agent. Based on analysis results,
+      suggest specific remediation actions following SRE best practices.
+
+  approval:
+    name: "sre_approval_agent"
+    model: "gpt-4"
+    temperature: 0.1
+    max_tokens: 500
+    system_message: |
+      You are a Kubernetes SRE Approval Agent. Review proposed actions for
+      safety and effectiveness before approval. Be conservative with high-risk actions.
+
+  execution:
+    name: "sre_execution_agent"
+    model: "gpt-3.5-turbo"
+    temperature: 0.0
+    max_tokens: 300
+    system_message: |
+      You are a Kubernetes SRE Execution Agent. Execute approved actions safely
+      with proper error handling and rollback capabilities.
+
+  guard:
+    name: "sre_guard_agent"
+    model: "gpt-3.5-turbo"
+    temperature: 0.0
+    max_tokens: 200
+    system_message: |
+      You are a Security Guard Agent. Enforce safety policies, rate limits,
+      and action allowlists for all SRE operations.
+
+# Multi-agent workflow settings
+workflow:
+  max_turns: 10
+  timeout_seconds: 300
+  require_consensus: true
+  human_in_loop_actions:
+    - "delete_resources"
+    - "scale_down_critical"
+    - "restart_database"

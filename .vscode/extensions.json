@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "charliermarsh.ruff",
+    "golang.go",
+    "redhat.vscode-yaml",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "EditorConfig.EditorConfig",
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    "esbenp.prettier-vscode",
+    "foxundermoon.shell-format"
+  ]
+}

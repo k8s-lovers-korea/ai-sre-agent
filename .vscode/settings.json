@@ -1,0 +1,38 @@
+{
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always",
+    "source.organizeImports": "always"
+  },
+
+  // Python
+  "python.defaultInterpreterPath": "./agent/venv/bin/python",
+  "python.analysis.typeCheckingMode": "basic",
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "ruff.lint.select": ["E", "F", "I", "B", "UP"],
+  "ruff.fixAll": true,
+
+  // Go
+  "go.useLanguageServer": true,
+  "go.formatTool": "gofmt",
+  "go.toolsManagement.autoUpdate": true,
+  "go.lintTool": "golangci-lint",
+
+  // YAML & K8s
+  "yaml.format.enable": true,
+  "yaml.validate": true,
+  "yaml.schemas": {
+    "kubernetes": [
+      "shared/**/*.yaml",
+      "operator/**/*.yaml"
+    ]
+  },
+
+  // Multi-root workspace paths
+  "python.analysis.extraPaths": ["./agent/src"],
+  "python.terminal.activateEnvironment": true
+}
