@@ -9,14 +9,14 @@ from __future__ import annotations
 from typing import Any
 import structlog
 
-from autogen import ConversableAgent
+from autogen_agentchat.agents import AssistantAgent
 
 from ..tools.kubernetes import KubernetesTools
 
 logger = structlog.get_logger()
 
 
-class AnalysisAgent(ConversableAgent):
+class AnalysisAgent(AssistantAgent):
     """
     Kubernetes issue analysis agent using AutoGen 0.7.4+ patterns.
 
@@ -28,33 +28,24 @@ class AnalysisAgent(ConversableAgent):
     """
 
     def __init__(
-        self, name: str = "analysis_agent", system_message: str | None = None, **kwargs
+        self, name: str = "analysis_agent", description: str | None = None, model_client=None, **kwargs
     ):
-        if system_message is None:
-            system_message = self._get_default_system_message()
-
-        super().__init__(name=name, system_message=system_message, **kwargs)
+        if description is None:
+            description = self._get_default_description()
 
         # Initialize Kubernetes tools
         self.k8s_tools = KubernetesTools()
 
-        # Register AutoGen function calling tools
-        self.register_for_llm(name="get_pod_status")(self.k8s_tools.get_pod_status)
-        self.register_for_llm(name="get_recent_events")(
-            self.k8s_tools.get_recent_events
+        # AutoGen 0.7.4+ requires model_client
+        super().__init__(
+            name=name,
+            description=description,
+            model_client=model_client,
+            # tools=[self._get_kubernetes_tools()],  # Tools will be added later
+            **kwargs
         )
-        self.register_for_llm(name="analyze_symptoms")(self._analyze_symptoms)
 
-        # Register for execution
-        self.register_for_execution(name="get_pod_status")(
-            self.k8s_tools.get_pod_status
-        )
-        self.register_for_execution(name="get_recent_events")(
-            self.k8s_tools.get_recent_events
-        )
-        self.register_for_execution(name="analyze_symptoms")(self._analyze_symptoms)
-
-    def _get_default_system_message(self) -> str:
+    def _get_default_description(self) -> str:
         return """You are a Kubernetes SRE Analysis Agent. Your role is to:
 
 1. **Analyze** Kubernetes events, logs, and metrics to identify issues
