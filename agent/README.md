@@ -203,7 +203,7 @@ class SREWorkflow:
         self.agents = self._create_agents()      # v0.2 호환
         self.group_chat = self._create_group_chat()  # v0.2 안정성
         self.manager = self._create_manager()    # GroupChatManager
-    
+
     def _create_manager(self) -> GroupChatManager:
         return GroupChatManager(
             groupchat=self.group_chat,
@@ -218,7 +218,7 @@ from autogen import ConversableAgent
 class AnalysisAgent(ConversableAgent):
     def __init__(self, name: str, **kwargs):
         super().__init__(name=name, system_message="...", **kwargs)
-        
+
         # v0.2 도구 등록 패턴
         self.register_for_llm(name="get_pod_status")(self.k8s_tools.get_pod_status)
         self.register_for_execution(name="get_pod_status")(self.k8s_tools.get_pod_status)
@@ -233,7 +233,7 @@ class ModernAnalysisAgent(AssistantAgent):
     def __init__(self, name: str, **kwargs):
         model_client = OpenAIChatCompletionClient(model="gpt-4")
         super().__init__(name=name, model_client=model_client, **kwargs)
-        
+
         # 새로운 도구 등록 방식 (0.7.4+)
 ```
 
