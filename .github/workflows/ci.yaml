@@ -1,0 +1,61 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    tags: ["agent-v*", "operator-v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+      version: ${{ steps.vars.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set variables from tag
+        id: vars
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          VERSION=${TAG#*-}
+          if [[ "${TAG}" == agent-v* ]]; then
+            echo "context=./agent" >> $GITHUB_OUTPUT
+            echo "dockerfile=./agent/Dockerfile" >> $GITHUB_OUTPUT
+            echo "image=${{ vars.REGISTRY_URL }}/${{ vars.PROJECT_NAME }}/agent" >> $GITHUB_OUTPUT
+          elif [[ "${TAG}" == operator-v* ]]; then
+            echo "context=./operator" >> $GITHUB_OUTPUT
+            echo "dockerfile=./operator/Dockerfile" >> $GITHUB_OUTPUT
+            echo "image=${{ vars.REGISTRY_URL }}/${{ vars.PROJECT_NAME }}/operator" >> $GITHUB_OUTPUT
+          else
+            echo "Unknown tag prefix: $TAG"
+            exit 0
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.vars.outputs.context }}
+          file: ${{ steps.vars.outputs.dockerfile }}
+          push: true
+          tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
+
+      - name: Logout from registry
+        if: always()
+        run: docker logout ${{ vars.REGISTRY_URL }}

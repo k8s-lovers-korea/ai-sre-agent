@@ -1,0 +1,34 @@
+name: Agent checks
+
+on:
+  push:
+    paths:
+      - "agent/**"
+  pull_request:
+    paths:
+      - "agent/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint dependencies
+        run: pip install flake8 bandit
+
+      - name: Lint
+        run: flake8 agent/
+
+      - name: Security scan
+        run: bandit -r agent/

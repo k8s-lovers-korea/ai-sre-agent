@@ -1,0 +1,30 @@
+name: Helm checks
+on:
+  push:
+    paths:
+      - "charts/**"
+  pull_request:
+    paths:
+      - "charts/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint Helm Chart
+        run: helm lint charts/operator
+
+      - name: Scan Helm chart with kube-linter
+        uses: stackrox/kube-linter-action@v1
+        with:
+          directory: charts/operator
