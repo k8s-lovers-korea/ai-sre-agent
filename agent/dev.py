@@ -47,6 +47,12 @@ def main():
 
     settings = get_settings()
 
+    ## Print all settings for verification
+    # model_dic = settings.model_dump()   
+    # for group in model_dic.keys():
+    #     for key, value in model_dic[group].items():
+    #         print(f"{key}: {value}")
+    
     # Override settings for development
     settings.api.reload = True
     settings.development.debug = True

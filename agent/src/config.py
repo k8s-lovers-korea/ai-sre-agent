@@ -50,7 +50,6 @@ class KubernetesSettings(BaseSettings):
     class Config:
         env_prefix = "K8S_"
 
-
 class APISettings(BaseSettings):
     """API server configuration."""
 
@@ -126,7 +125,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
-
+        extra = "ignore"
 
 # Global settings instance
 _settings: Settings | None = None
