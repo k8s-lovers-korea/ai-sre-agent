@@ -34,7 +34,7 @@ jobs:
             echo "image=${{ vars.REGISTRY_URL }}/${{ vars.PROJECT_NAME }}/operator" >> $GITHUB_OUTPUT
           else
             echo "Unknown tag prefix: $TAG"
-            exit 0
+            exit 1
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
