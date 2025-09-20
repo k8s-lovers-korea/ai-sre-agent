@@ -4,13 +4,9 @@ on:
   push:
     paths:
       - "agent/**"
-    paths-ignore:
-      - ".github/workflows/**"
   pull_request:
     paths:
       - "agent/**"
-    paths-ignore:
-      - ".github/workflows/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
