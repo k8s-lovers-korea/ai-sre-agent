@@ -359,10 +359,15 @@ Available tools:
         if any(indicator in namespace.lower() for indicator in production_indicators):
             return SLATier.TIER1
             
-        # Development/staging get lower SLA
+        # Development/staging get lower SLA  
         dev_indicators = ['dev', 'development', 'staging', 'test', 'demo']
         if any(indicator in namespace.lower() for indicator in dev_indicators):
             return SLATier.TIER3
+        
+        # Special high-priority namespaces
+        high_priority_indicators = ['critical', 'tier1', 'sensitive', 'secure']
+        if any(indicator in namespace.lower() for indicator in high_priority_indicators):
+            return SLATier.TIER1
             
         # Check context for additional hints
         if context:
