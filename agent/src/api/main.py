@@ -54,6 +54,12 @@ class DecisionResponse(BaseModel):
     recommended_actions: list[dict[str, Any]]
     reasoning: str
     correlation_id: str
+    
+    # Enhanced classification fields
+    classified_issues: list[dict[str, Any]] = []
+    escalation_required: bool = False
+    highest_priority: str | None = None
+    issue_categories: list[str] = []
 
 
 class ExecutionRequest(BaseModel):
@@ -103,6 +109,27 @@ async def decide(request: DecisionRequest) -> DecisionResponse:
             namespace=request.namespace,
             resource_name=request.resource_name,
         )
+        
+        # Extract classification data from result
+        classified_issues = result.get("classified_issues", [])
+        escalation_required = result.get("escalation_required", False)
+        
+        # Determine highest priority and categories
+        highest_priority = None
+        issue_categories = []
+        
+        if classified_issues:
+            priorities = [issue.get("priority") for issue in classified_issues]
+            categories = list(set(issue.get("category") for issue in classified_issues))
+            
+            # Order by priority (p0 is highest)
+            priority_order = ["p0", "p1", "p2", "p3"]
+            for p in priority_order:
+                if p in priorities:
+                    highest_priority = p
+                    break
+                    
+            issue_categories = categories
 
         return DecisionResponse(
             decision=result.get("decision", "human_review"),
@@ -110,6 +137,10 @@ async def decide(request: DecisionRequest) -> DecisionResponse:
             recommended_actions=result.get("recommended_actions", []),
             reasoning=result.get("reasoning", "Multi-agent analysis completed"),
             correlation_id=correlation_id,
+            classified_issues=classified_issues,
+            escalation_required=escalation_required,
+            highest_priority=highest_priority,
+            issue_categories=issue_categories,
         )
 
     except Exception as e:

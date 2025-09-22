@@ -129,7 +129,7 @@ class SREWorkflow:
             resource_name: Resource name
 
         Returns:
-            Decision result with recommended actions
+            Decision result with recommended actions and classification data
         """
         logger.info(
             "Starting SRE workflow", namespace=namespace, resource=resource_name
@@ -143,7 +143,8 @@ class SREWorkflow:
         Resource: {resource_name}
         Event Data: {event_data}
 
-        Please analyze this incident and recommend appropriate actions.
+        Please analyze this incident, classify it by severity and category, 
+        and recommend appropriate actions based on the SLA requirements.
         """
 
         try:
@@ -154,8 +155,15 @@ class SREWorkflow:
             cancellation_token = CancellationToken()
             task_result = await self.team.run(task=initial_task, cancellation_token=cancellation_token)
 
-            # Extract decision from TaskResult
+            # Extract decision from TaskResult with enhanced data
             result = self._extract_decision(task_result)
+            
+            # Add metadata from the incident processing
+            result["incident_metadata"] = {
+                "namespace": namespace,
+                "resource_name": resource_name,
+                "event_data": event_data
+            }
 
             logger.info("Team processing completed", result=result)
             return result
@@ -167,6 +175,8 @@ class SREWorkflow:
                 "confidence": 0.0,
                 "recommended_actions": [],
                 "reasoning": f"Workflow failed: {str(e)}",
+                "classified_issues": [],
+                "escalation_required": False,
             }
 
     def _extract_decision(self, task_result: TaskResult) -> dict[str, Any]:
@@ -206,13 +216,19 @@ class SREWorkflow:
                     "priority": "medium"
                 }
             ]
+            
+            # Placeholder classification data (in production, this would come from the analysis agent)
+            classified_issues = []
+            escalation_required = False
 
             return {
                 "decision": decision,
                 "confidence": confidence,
                 "recommended_actions": recommended_actions,
                 "reasoning": f"Multi-agent team analysis: {last_content[:200]}...",
-                "full_conversation": [str(msg) for msg in task_result.messages]
+                "full_conversation": [str(msg) for msg in task_result.messages],
+                "classified_issues": classified_issues,
+                "escalation_required": escalation_required,
             }
 
         except Exception as e:
@@ -222,6 +238,8 @@ class SREWorkflow:
                 "confidence": 0.0,
                 "recommended_actions": [],
                 "reasoning": f"Error parsing task result: {str(e)}",
+                "classified_issues": [],
+                "escalation_required": False,
             }
 
     async def close(self) -> None:
