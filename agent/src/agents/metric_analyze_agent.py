@@ -22,7 +22,6 @@ from plugins.prometheus_plugin import get_prometheus_tools_for_agent
 
 logger = structlog.get_logger()
 
-logger = structlog.get_logger()
 
 
 class MetricAnalyzeAgent(AssistantAgent):
