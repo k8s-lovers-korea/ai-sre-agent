@@ -21,8 +21,8 @@ from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from agents.analysis import AnalysisAgent
 from agents.metric_analyze_agent import MetricAnalyzeAgent
 from configs.config import get_settings
-from plugins.log_summarizer import get_log_summarizer_tools
 from plugins.loki_client import get_loki_tools
+from plugins.log_summarizer import get_log_summarizer_tools
 
 logger = structlog.get_logger()
 
