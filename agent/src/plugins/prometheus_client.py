@@ -304,8 +304,7 @@ class PrometheusTools:
         """
         Query essential system metrics with calculated values.
 
-        Returns CPU usage percentage, memory usage percentage, disk usage percentage,
-        and system availability - all as calculated metrics rather than raw values.
+        Returns CPU usage percentage, memory usage percentage, disk usage percentage, and system availability—all as calculated metrics rather than raw values.
         """
         try:
             # Define essential calculated metrics with Kubernetes filters
