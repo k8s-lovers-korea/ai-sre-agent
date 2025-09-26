@@ -19,6 +19,7 @@ from autogen_core import CancellationToken
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 
 from agents.analysis import AnalysisAgent
+from agents.metric_analyze_agent import MetricAnalyzeAgent
 from configs.config import get_settings
 from plugins.log_summarizer import get_log_summarizer_tools
 from plugins.loki_client import get_loki_tools
@@ -80,6 +81,24 @@ class SREWorkflow:
             tools=all_tools,
         )
 
+        # Create metric analysis agent
+        metric_model_client = AzureOpenAIChatCompletionClient(
+            model="gpt-4o",  # or your deployed model name
+            azure_deployment="gpt-4o",  # your deployment name in Azure
+            azure_endpoint=azure_endpoint,
+            api_key=azure_api_key,
+            api_version=azure_api_version,
+            seed=42,
+            temperature=0.1,
+        )
+        self._model_clients.append(metric_model_client)
+
+        metric_analyze_agent = MetricAnalyzeAgent(
+            name="metric_analyze_agent",
+            description="Metric analysis agent specialized in Prometheus monitoring data.",
+            model_client=metric_model_client,
+        )
+
         # Create other placeholder agents
         recommendation_model_client = AzureOpenAIChatCompletionClient(
             model="gpt-4o",  # or your deployed model name
@@ -101,6 +120,7 @@ class SREWorkflow:
 
         return {
             "analysis": analysis_agent,
+            "metric_analyze": metric_analyze_agent,
             "recommendation": recommendation_agent,
         }
 
@@ -146,21 +166,39 @@ class SREWorkflow:
         Please analyze this incident comprehensively. You have access to:
         
         **Log Collection Tools (Loki):**
-        - analyze_pod_errors(namespace, pod_name, time_window_minutes): Get error logs for specific pods
-        - get_application_logs(app_label, namespace, log_level, time_window_minutes): Get application logs
-        - search_logs_by_pattern(pattern, namespace, time_window_minutes): Search logs by patterns
+        - analyze_pod_errors(namespace, pod_name, time_window_minutes): 
+          Get error logs for specific pods
+        - get_application_logs(app_label, namespace, log_level, 
+          time_window_minutes): Get application logs
+        - search_logs_by_pattern(pattern, namespace, time_window_minutes): 
+          Search logs by patterns
         
         **Advanced Log Analysis Tools (LLM-powered):**
-        - summarize_error_logs(error_logs, incident_context, time_window_minutes): AI-powered error analysis
-        - summarize_application_logs(app_logs, application_name, analysis_focus): Application-specific insights
-        - analyze_log_patterns(log_entries, pattern_description, severity_focus): Pattern analysis
-        - comprehensive_log_analysis(all_logs, incident_summary, affected_components): Holistic analysis
+        - summarize_error_logs(error_logs, incident_context, 
+          time_window_minutes): AI-powered error analysis
+        - summarize_application_logs(app_logs, application_name, 
+          analysis_focus): Application-specific insights
+        - analyze_log_patterns(log_entries, pattern_description, 
+          severity_focus): Pattern analysis
+        - comprehensive_log_analysis(all_logs, incident_summary, 
+          affected_components): Holistic analysis
+        
+        **Prometheus Metric Analysis Tools:**
+        The metric_analyze_agent specializes in step-by-step Prometheus 
+        analysis following best practices. It will:
+        
+        1. Start with essential system metrics (CPU, memory, disk usage)
+        2. Explore available metrics if deeper investigation is needed
+        3. Query specific metrics for detailed time-series analysis
+        4. Check Prometheus targets if metrics collection fails
         
         **Recommended Workflow:**
         1. First, collect relevant logs using Loki tools
-        2. Then use LLM-powered analysis tools to get intelligent insights from the collected logs
-        3. Combine findings for comprehensive incident analysis
-        4. Provide actionable recommendations based on AI analysis
+        2. Then use LLM-powered analysis tools to get intelligent insights
+        3. If performance issues are suspected, engage metric_analyze_agent 
+           for comprehensive Prometheus analysis
+        4. Combine findings for comprehensive incident analysis
+        5. Provide actionable recommendations based on AI analysis
         
         The AI analysis tools will provide:
         - Root cause identification
@@ -168,7 +206,8 @@ class SREWorkflow:
         - Priority-based action plans
         - Cross-component correlation analysis
         
-        Start by analyzing the incident and using the appropriate tools to gather comprehensive information.
+        Start by analyzing the incident and using the appropriate tools to 
+        gather comprehensive information.
         """
 
         try:

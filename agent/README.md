@@ -24,6 +24,16 @@ python dev.py
 curl -X POST http://localhost:8000/decide \
   -H "Content-Type: application/json" \
   -d '{"event_type": "Warning", "namespace": "default", "resource_name": "test-pod", "resource_kind": "Pod", "event_data": {}}'
+
+# 5. Interactive Terminal Chat (New!)
+python chat_with_agent.py
+# → Real-time terminal conversation with MetricAnalyzeAgent
+# → Direct Prometheus tools access and function calling
+# → Step-by-step workflow guidance
+
+python enhanced_chat.py  
+# → Enhanced version with streaming support
+# → Advanced console UI features
 ```
 
 ## Architecture
@@ -35,13 +45,23 @@ K8s Event → SREWorkflow (GroupChat) → Decision/Actions
               ↓
     🔍 Analysis Agent (diagnoses with K8s tools)
               ↓
-    💡 Recommendation Agent (suggests actions)
+    � Metric Analysis Agent (Prometheus monitoring)
+              ↓
+    �💡 Recommendation Agent (suggests actions)
               ↓
     🛡️ Guard Agent (validates safety)
               ↓
     ✅ Approval Agent (makes final decision)
               ↓
     ⚡ Execution Agent (implements actions)
+    
+💬 Terminal Chat → Direct Agent Conversation
+              ↓
+    🤖 MetricAnalyzeAgent (Interactive Prometheus analysis)
+              ↓
+    🔧 Real-time Tool Execution (prometheus_get_*, query_*)
+              ↓  
+    📊 Step-by-step Workflow Guidance
 ```
 
 ### Key Components
@@ -50,8 +70,10 @@ K8s Event → SREWorkflow (GroupChat) → Decision/Actions
 - **GroupChatManager**: AutoGen's native orchestrator for agent conversations
 - **KubernetesTools**: Real K8s API integration with function calling
 - **Analysis Agent**: Pattern matching and symptom correlation with evidence
+- **Metric Analysis Agent**: Specialized Prometheus monitoring and analysis
 - **Multi-Agent Decision**: Collaborative reasoning through structured conversations
 - **Safety-First**: Dry-run mode, human approval, and action validation
+- **Interactive Terminal Chat**: Direct real-time agent conversation interface
 
 ## Configuration
 
@@ -135,6 +157,58 @@ curl -X POST http://localhost:8000/decide \
 
 **Response**: Multi-agent analysis with decision, confidence, and recommended actions.
 
+## Interactive Terminal Chat
+
+### Real-time Agent Conversation
+
+Chat directly with specialized agents in your terminal using AutoGen 0.7+ features:
+
+```bash
+# Basic terminal chat with MetricAnalyzeAgent
+python chat_with_agent.py
+
+# Enhanced version with streaming support
+python enhanced_chat.py
+```
+
+### Key Features
+
+- **🤖 Real AutoGen Agents**: Actual `MetricAnalyzeAgent` with full Prometheus tools
+- **🔧 Function Calling**: Direct access to `prometheus_get_*` tools 
+- **📊 Step-by-step Workflow**: Guided 4-step analysis process
+- **💬 Interactive Commands**: help, status, reset, quit
+- **🚀 Multi-agent Ready**: Easy to add more agents to `RoundRobinGroupChat`
+
+### Chat Examples
+
+```bash
+💬 메시지: monitoring 네임스페이스의 pod 중 cpu가 높은 것들을 찾고 싶어
+🤖 metric_analyzer: Step 1에서 prometheus_get_essential_metrics() 호출...
+
+💬 메시지: prometheus 타겟 상태를 확인해줘  
+🤖 metric_analyzer: prometheus_get_targets() 실행하여 스크래핑 상태 점검...
+
+💬 메시지: help
+📖 현재 워크플로우 단계: Step 2 - Metric Name Exploration
+```
+
+### Adding More Agents
+
+Simply add agents to the `participants` list in `RoundRobinGroupChat`:
+
+```python
+# In _create_agent() method
+self.team = RoundRobinGroupChat(
+    participants=[
+        metric_agent,           # Existing
+        analysis_agent,         # Add more agents
+        recommendation_agent,   # Multi-agent conversation
+    ],
+    termination_condition=termination,
+    max_turns=5,
+)
+```
+
 ## Development
 
 ### Install & Run
@@ -147,6 +221,16 @@ python dev.py
 # ✅ API: http://localhost:8000
 # ✅ Docs: http://localhost:8000/docs (Swagger UI)
 # ✅ Docs: http://localhost:8000/redoc (ReDoc)
+
+# Interactive terminal chat with agents
+python chat_with_agent.py
+# ✅ Real-time MetricAnalyzeAgent conversation
+# ✅ Direct Prometheus tool access
+# ✅ Step-by-step workflow guidance
+
+python enhanced_chat.py  
+# ✅ Enhanced streaming support
+# ✅ Advanced console UI features
 
 # Or direct API start (production mode)
 python -m src.api.main
@@ -211,17 +295,25 @@ class SREWorkflow:
 
 #### 에이전트 작성 패턴
 
-**v0.7.4+ 최신 방식** :
+**v0.7.4+ 최신 방식** (터미널 채팅에서 사용):
 ```python
 from autogen_agentchat.agents import AssistantAgent
-from autogen_ext.models.openai import OpenAIChatCompletionClient
+from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+from autogen_agentchat.teams import RoundRobinGroupChat
 
-class ModernAnalysisAgent(AssistantAgent):
+class InteractiveAgent(AssistantAgent):
     def __init__(self, name: str, **kwargs):
-        model_client = OpenAIChatCompletionClient(model="gpt-4")
+        model_client = AzureOpenAIChatCompletionClient(model="gpt-4o")
         super().__init__(name=name, model_client=model_client, **kwargs)
 
-        # 새로운 도구 등록 방식 (0.7.4+)
+# Terminal chat with multiple agents
+team = RoundRobinGroupChat(
+    participants=[agent1, agent2, agent3],
+    termination_condition=termination,
+    max_turns=5,
+)
+
+result = await team.run(task="사용자 메시지")
 ```
 
 #### 도구(Tools) 작성 패턴
@@ -249,7 +341,27 @@ async def get_pod_status(
 
 #### 워크플로우 실행 패턴 (AutoGen 0.7.4+)
 
-**비동기 처리 + 새로운 GroupChat 기능**:
+**터미널 채팅 방식** (실시간 대화):
+```python
+# Interactive terminal chat implementation
+class InteractiveChat:
+    def __init__(self):
+        self.agent = MetricAnalyzeAgent(model_client=model_client)
+        self.team = RoundRobinGroupChat(
+            participants=[self.agent],
+            termination_condition=termination,
+            max_turns=3,
+        )
+    
+    async def _chat_with_agent(self, user_input: str) -> str:
+        result = await self.team.run(task=user_input)
+        # Extract response from TaskResult
+        return self._extract_response(result)
+
+# Usage: python chat_with_agent.py
+```
+
+**비동기 처리 + GroupChat** (기존 API 방식):
 ```python
 async def process_incident(self, event_data: dict) -> dict:
     initial_message = f"분석해주세요: {event_data}"
